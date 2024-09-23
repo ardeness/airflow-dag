@@ -86,7 +86,7 @@ def create_dag(meta, schedule, default_args):
 
 #results = MongoHook(mongo_conn_id).get_collection(mongo_db='workflow', mongo_collection='workflow').find()
 #for meta in results:
-meta = [
+results = [
     { '_id': 0, 'project_id': 'test0', 'image': 'hello-world'},
     { '_id': 1, 'project_id': 'test1', 'image': 'hello-world'}
 ]
