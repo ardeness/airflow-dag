@@ -18,14 +18,13 @@ else:
 def create_dag(schedule, default_args):
     dag_id = 'simple-dag'
     image = 'hello-world'
+    project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
     compute_resources = k8s.V1ResourceRequirements(
         requests={"cpu": "100m", "memory": "100Mi"},
         limits={"cpu": "500m", "memory": "1Gi"}
     )
-
-    project = 'hycu'
 
     with dag:
         KubernetesPodOperator(
