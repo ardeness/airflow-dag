@@ -27,7 +27,7 @@ def create_dag(schedule, default_args):
     #)
 
     with dag:
-        KubernetesPodOperator(
+        simple_task1 = KubernetesPodOperator(
             namespace=namespace,
             image = image,
             image_pull_policy='Always',
@@ -41,6 +41,21 @@ def create_dag(schedule, default_args):
             is_delete_operator_pod=True,
             get_logs=True,
         )
+        simple_task2 = KubernetesPodOperator(
+            namespace=namespace,
+            image = image,
+            image_pull_policy='Always',
+            cmds = [],
+            name="task-"+project+"-",
+            task_id="task-"+project+"-",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+        )
+        simple_task1 >> simple_task2
 
     return dag
 
