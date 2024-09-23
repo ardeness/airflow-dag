@@ -25,6 +25,8 @@ def create_dag(schedule, default_args):
         limits={"cpu": "500m", "memory": "1Gi"}
     )
 
+    project = 'hycu'
+
     with dag:
         KubernetesPodOperator(
             namespace=namespace,
