@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.configuration import conf
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.kubernetes.secret import Secret
-from airflow.providers.mongo.hooks.mongo import MongoHook
+#from airflow.providers.mongo.hooks.mongo import MongoHook
 from kubernetes.client import models as k8s
 
 mongo_conn_id = 'mongodb_conn'

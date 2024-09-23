@@ -31,7 +31,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = image,
             image_pull_policy='Always',
-            cmds = []
+            cmds = [],
             name="task-"+project+"-",
             task_id="task-"+project+"-",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
