@@ -55,4 +55,4 @@ default_args = {
 }
 
 
-    globals()['simple-dag'] = create_dag(None, default_args)
+globals()['simple-dag'] = create_dag(None, default_args)
