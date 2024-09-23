@@ -32,8 +32,8 @@ def create_dag(schedule, default_args):
             image = image,
             image_pull_policy='Always',
             cmds = [],
-            name="task-"+project+"-",
-            task_id="task-"+project+"-",
+            name="task-"+project+"-simple1",
+            task_id="task-"+project+"-simple1",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
@@ -46,8 +46,8 @@ def create_dag(schedule, default_args):
             image = image,
             image_pull_policy='Always',
             cmds = [],
-            name="task-"+project+"-",
-            task_id="task-"+project+"-",
+            name="task-"+project+"-simple2",
+            task_id="task-"+project+"-simple2",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
