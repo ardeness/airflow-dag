@@ -16,7 +16,7 @@ else:
     config_file = None
 
 def create_dag(schedule, default_args):
-    dag_id = 'simple-dag'
+    dag_id = 'hycu-subtitle'
     image = 'hello-world'
     project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
