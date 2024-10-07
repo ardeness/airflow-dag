@@ -66,7 +66,10 @@ def create_dag(schedule, default_args):
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
-            resources=[whisper_compute_resources],
+            resources={
+                "request":{"cpu": "1000m", "memory": "4Gi"},
+                "limits":{"cpu": "1000m", "memory": "4Gi"}
+            },
             is_delete_operator_pod=True,
             get_logs=True,
         )
