@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.configuration import conf
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
-from airflow.kubernetes.secret import Secret
+#from airflow.kubernetes.secret import Secret
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
@@ -16,15 +16,15 @@ else:
     config_file = None
 
 def create_dag(schedule, default_args):
-    dag_id = 'hycu-subtitle'
+    dag_id = 'hycu-subtitle'    
     image = 'hello-world'
     project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
-    #compute_resources = k8s.V1ResourceRequirements(
-    #    requests={"cpu": "100m", "memory": "100Mi"},
-    #    limits={"cpu": "500m", "memory": "1Gi"}
-    #)
+    whisper_compute_resources = k8s.V1ResourceRequirements(
+       requests={"cpu": "1000m", "memory": "4Gi"},
+       limits={"cpu": "1000m", "memory": "4Gi"}
+    )
 
     with dag:
         wav_extractor = KubernetesPodOperator(
@@ -66,7 +66,7 @@ def create_dag(schedule, default_args):
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
-            #resources=compute_resources,
+            resources=whisper_compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
         )
