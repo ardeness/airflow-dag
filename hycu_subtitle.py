@@ -16,7 +16,7 @@ else:
     config_file = None
 
 def create_dag(schedule, default_args):
-    dag_id = 'hycu-subtitle'    
+    dag_id = 'hycu-subtitle'
     image = 'hello-world'
     project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
@@ -66,7 +66,7 @@ def create_dag(schedule, default_args):
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
-            resources=whisper_compute_resources,
+            resources=[whisper_compute_resources],
             is_delete_operator_pod=True,
             get_logs=True,
         )
