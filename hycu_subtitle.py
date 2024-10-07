@@ -67,7 +67,7 @@ def create_dag(schedule, default_args):
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
             resources={
-                "request":{"cpu": "1000m", "memory": "4Gi"},
+                "requests":{"cpu": "1000m", "memory": "4Gi"},
                 "limits":{"cpu": "1000m", "memory": "4Gi"}
             },
             is_delete_operator_pod=True,
