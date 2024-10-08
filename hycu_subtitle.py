@@ -22,8 +22,8 @@ def create_dag(schedule, default_args):
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
     whisper_compute_resources = k8s.V1ResourceRequirements(
-       requests={"cpu": "1000m", "memory": "4Gi"},
-       limits={"cpu": "1000m", "memory": "4Gi"}
+       requests={"memory": "16Gi"},
+       limits={"memory": "16Gi"}
     )
 
     with dag:
