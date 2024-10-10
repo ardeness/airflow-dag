@@ -72,7 +72,7 @@ def create_dag(schedule, default_args):
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
             #container_resources=whisper_compute_resources,
-            tolerations=gpu_toleration,
+            tolerations=[gpu_toleration],
             is_delete_operator_pod=True,
             get_logs=True,
         )
