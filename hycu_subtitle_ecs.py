@@ -78,7 +78,7 @@ def create_dag(schedule, default_args):
             region="ap-northeast-2",
             task_id="hello_world",
             task_definition="hycu-ecs-task",
-            cluster="hycu-ecs",
+            cluster="hycu-ecs-cluster",
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
