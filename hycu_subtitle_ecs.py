@@ -77,6 +77,7 @@ def create_dag(schedule, default_args):
             aws_conn_id="aws-ecs",
             region="ap-northeast-2",
             task_id="hello_world",
+            task_definition="b507a6abf86f4b0f955935326281f77b",
             cluster="hycu-ecs",
             task_definition="ecs-whisper-task",
             launch_type="FARGATE",
