@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.configuration import conf
-from airflow.providers.amazon.aws.operators.ecs import ECSOperator
+from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 #from airflow.kubernetes.secret import Secret
 from kubernetes.client import models as k8s
@@ -73,12 +73,10 @@ def create_dag(schedule, default_args):
         #     is_delete_operator_pod=True,
         #     get_logs=True,
         # )
-        whisper = ECSOperator(
+        whisper = EcsRunTaskOperator(
             task_id="hello_world",
-            dag=dag,
-            aws_conn_id="aws-ecs",
             cluster="hycu-ecs",
-            task_definition="hello-world",
+            task_definition="ecs-whisper-task",
             launch_type="FARGATE",
             overrides={
                 "containerOverrides": [
@@ -90,19 +88,11 @@ def create_dag(schedule, default_args):
             },
             # network_configuration={
             #     "awsvpcConfiguration": {
-            #         "securityGroups": [os.environ.get("SECURITY_GROUP_ID", "sg-123abc")],
-            #         "subnets": [os.environ.get("SUBNET_ID", "subnet-123456ab")],
+            #         "subnets": test_context[SUBNETS_KEY],
+            #         "securityGroups": test_context[SECURITY_GROUPS_KEY],
+            #         "assignPublicIp": "ENABLED",
             #     },
             # },
-            tags={
-                "Customer": "X",
-                "Project": "Y",
-                "Application": "Z",
-                "Version": "0.0.1",
-                "Environment": "Development",
-            },
-            awslogs_group="/ecs/hello-world",
-            awslogs_stream_prefix="prefix_b/hello-world-container",  # prefix with container name
         )
         llm = KubernetesPodOperator(
             namespace=namespace,
