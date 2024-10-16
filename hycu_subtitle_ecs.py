@@ -77,7 +77,7 @@ def create_dag(schedule, default_args):
             aws_conn_id="aws-ecs",
             region="ap-northeast-2",
             task_id="hello_world",
-            task_definition="8d86123b1b6a4d048a9799778cb925de",
+            task_definition="hycu-ecs-task",
             cluster="hycu-ecs",
             launch_type="FARGATE",
             overrides={
