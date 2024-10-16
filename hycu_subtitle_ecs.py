@@ -83,7 +83,7 @@ def create_dag(schedule, default_args):
             overrides={
                 "containerOverrides": [
                     {
-                        "name": "hello-world-container",
+                        "name": "hycu-ecs-container",
                         "command": ["echo", "hello", "world"],
                     },
                 ],
