@@ -88,13 +88,13 @@ def create_dag(schedule, default_args):
                     },
                 ],
             },
-            # network_configuration={
-            #     "awsvpcConfiguration": {
-            #         "subnets": test_context[SUBNETS_KEY],
-            #         "securityGroups": test_context[SECURITY_GROUPS_KEY],
-            #         "assignPublicIp": "ENABLED",
-            #     },
-            # },
+            network_configuration={
+                "awsvpcConfiguration": {
+                    "subnets": ["subnet-0e95c6a710095faa9","subnet-003eb770604b67c6f","subnet-0c30afa6c475dedde"],
+                    "securityGroups": ["sg-0d46f9f2f3413684f","sg-049615c2505f13b4f","sg-015fb8273f0e50798"],
+                    "assignPublicIp": "DISABLED",
+                },
+            },
         )
         llm = KubernetesPodOperator(
             namespace=namespace,
