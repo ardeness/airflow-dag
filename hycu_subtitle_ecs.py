@@ -74,7 +74,7 @@ def create_dag(schedule, default_args):
         #     get_logs=True,
         # )
         whisper = EcsRunTaskOperator(
-            aws_conn_id="hycu-ecs",
+            aws_conn_id="aws-ecs",
             task_id="hello_world",
             cluster="hycu-ecs",
             task_definition="ecs-whisper-task",
