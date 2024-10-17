@@ -62,7 +62,7 @@ def create_dag(schedule, default_args):
         )
         whisper = KubernetesPodOperator(
             namespace=namespace,
-            image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/whisper-cpp:latest',
+            image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/auto-subtitle:latest',
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = [],
