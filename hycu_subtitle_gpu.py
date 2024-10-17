@@ -23,7 +23,7 @@ def create_dag(schedule, default_args):
 
     whisper_compute_resources = k8s.V1ResourceRequirements(
        #requests={"nvidia.com/gpu": "1"},
-       limits={"nvidia.com/gpu": "4"}
+       limits={"nvidia.com/gpu": "1"}
     )
 
     with dag:
