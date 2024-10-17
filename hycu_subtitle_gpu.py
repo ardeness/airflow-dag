@@ -75,6 +75,7 @@ def create_dag(schedule, default_args):
             tolerations=[gpu_toleration],
             is_delete_operator_pod=True,
             get_logs=True,
+            startup_timeout_seconds=1200
         )
         llm = KubernetesPodOperator(
             namespace=namespace,
