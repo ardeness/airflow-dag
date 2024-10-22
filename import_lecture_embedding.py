@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.configuration import conf
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
-from airflow.kubernetes.secret import Secret
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
@@ -20,7 +19,7 @@ def create_dag(schedule, default_args):
     project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
-    secret_env = Secret(
+    secret_env = k8s.V1Secret(
         deploy_type = "env",
         deploy_target = None,
         secret = "lecture-rag"
@@ -40,7 +39,7 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secret_env = secret_env
+            secrets = [secret_env]
         )
         import_lecture_embedding
 
