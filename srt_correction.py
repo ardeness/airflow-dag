@@ -19,11 +19,7 @@ def create_dag(schedule, default_args):
     project = 'hycu'
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
-    secret_env = k8s.V1Secret(
-        deploy_type = "env",
-        deploy_target = None,
-        secret = "lecture-rag"
-    )
+    secret_env = k8s.V1Secret("env",None,"lecture-rag")
 
     with dag:
         srt_correction =  KubernetesPodOperator(
