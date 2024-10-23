@@ -44,6 +44,7 @@ def create_dag(schedule, default_args):
             is_delete_operator_pod=True,
             get_logs=True,
             secrets = [secret_env],
+            volumes=[volume],
             volume_mounts=[volume_mount]
         )
         import_lecture_embedding
