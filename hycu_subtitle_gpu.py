@@ -2,8 +2,9 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.configuration import conf
+from airflow.models.param import Param
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
-#from airflow.kubernetes.secret import Secret
+from airflow.providers.cncf.kubernetes.secret import Secret
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
@@ -17,21 +18,76 @@ else:
 
 def create_dag(schedule, default_args):
     dag_id = 'hycu-subtitle-gpu'
-    image = 'hello-world'
     project = 'hycu'
-    dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
+    dag = DAG(
+        dag_id,
+        tags=[project],
+        schedule_interval=schedule,
+        default_args=default_args,
+        is_paused_upon_creation=False,
+        params={
+            "file": Param("test.mp4", type="string"),
+            "collection": Param("finance", type="string"),
+        }
+    )
 
+    secret_env = Secret("env",None,"lecture-rag")
+    s3_secret = Secret("env",None,"s3")
+    volume = k8s.V1Volume(
+        name="efs-claim",
+        persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="efs-claim"),
+    )
+    volume_mount = k8s.V1VolumeMount(
+        name="efs-claim",
+        mount_path="/opt/data"
+    )
+    wav_mount =  k8s.V1VolumeMount(
+        name="efs-claim",
+        mount_path="/mnt"
+    )
+    gpu_mount = k8s.V1VolumeMount(
+        name="efs-claim",
+        mount_path="/workspace/data"
+    )
     whisper_compute_resources = k8s.V1ResourceRequirements(
        #requests={"nvidia.com/gpu": "1"},
        limits={"nvidia.com/gpu": "1"}
     )
+    gpu_toleration = k8s.V1Toleration(
+        key= "nvidia.com/gpu",
+        operator="Exists",
+        effect="NoSchedule"
+    )
 
     with dag:
+        file = "{{ params.file}}"
+        collection = "{{ params.collection}}"
+        file_prefix = file.rsplit('.', 1)[0]
+        wav_file = file_prefix + ".wav"
+
+        prepare =  KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_policy='Always',
+            cmds = ["python", "prepare.py", file],
+            name="task-"+project+"-prepare",
+            task_id="task-"+project+"-prepare",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            secrets = [s3_secret],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
+        )
+
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
-            image = image,
+            image = "linuxserver/ffmpeg:latest",
             image_pull_policy='Always',
-            cmds = [],
+            cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+wav_file],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -40,32 +96,31 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
+            volumes=[volume],
+            volume_mounts=[wav_mount]
         )
-        voice_separator = KubernetesPodOperator(
-            namespace=namespace,
-            image = image,
-            image_pull_policy='Always',
-            cmds = [],
-            name="task-"+project+"-voice-separator",
-            task_id="task-"+project+"-voice-separator",
-            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-            config_file=config_file,
-            #resources=compute_resources,
-            is_delete_operator_pod=True,
-            get_logs=True,
-        )
-        gpu_toleration = k8s.V1Toleration(
-            key= "nvidia.com/gpu",
-            operator="Exists",
-            effect="NoSchedule"
-        )
+
+        # voice_separator = KubernetesPodOperator(
+        #     namespace=namespace,
+        #     image = image,
+        #     image_pull_policy='Always',
+        #     cmds = [],
+        #     name="task-"+project+"-voice-separator",
+        #     task_id="task-"+project+"-voice-separator",
+        #     in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+        #     cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+        #     config_file=config_file,
+        #     #resources=compute_resources,
+        #     is_delete_operator_pod=True,
+        #     get_logs=True,
+        # )
+
         whisper = KubernetesPodOperator(
             namespace=namespace,
             image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/auto-subtitle:latest',
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = [],
+            cmds = ["python", "-m", "auto_subtitle" "/workspace/data"+wav_file],
             name="task-"+project+"-whisper",
             task_id="task-"+project+"-whisper",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -76,23 +131,45 @@ def create_dag(schedule, default_args):
             is_delete_operator_pod=True,
             #get_logs=True,
             get_logs=False,
+            volumes=[volume],
+            volume_mounts=[gpu_mount],
             startup_timeout_seconds=1200
         )
-        llm = KubernetesPodOperator(
+        srt_correction =  KubernetesPodOperator(
             namespace=namespace,
-            image = image,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
             image_pull_policy='Always',
-            cmds = [],
-            name="task-"+project+"-llm",
-            task_id="task-"+project+"-llm",
+            cmds = ["python", "correction.py", "/opt/data/"+file_prefix+".srt", collection],
+            name="task-"+project+"-srt-correction",
+            task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
+            secrets = [secret_env],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
         )
-        wav_extractor >> voice_separator >> whisper >> llm
+        cleanup =  KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_policy='Always',
+            cmds = ["python", "cleanup.py", file_prefix+"_rag.srt", file_prefix+"_rag.srt"],
+            name="task-"+project+"-cleanup",
+            task_id="task-"+project+"-cleanup",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            secrets = [s3_secret],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
+        )
+        prepare >> wav_extractor >> whisper >> srt_correction >> cleanup
 
     return dag
 
