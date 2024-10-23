@@ -27,7 +27,7 @@ def create_dag(schedule, default_args):
     )
     volume_mount = k8s.V1VolumeMount(
         name="efs-claim",
-        mount_p9ath="/opt/data"
+        mount_path="/opt/data"
     )
     with dag:
         import_lecture_embedding =  KubernetesPodOperator(
