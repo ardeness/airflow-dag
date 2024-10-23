@@ -48,7 +48,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_policy='Always',
-            cmds = ["python", "prepare.py", file+".srt"],
+            cmds = ["python", "prepare.py", file],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
