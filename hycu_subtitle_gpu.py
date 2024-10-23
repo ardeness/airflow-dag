@@ -120,7 +120,7 @@ def create_dag(schedule, default_args):
             image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/auto-subtitle:latest',
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "-m", "auto_subtitle" "/workspace/data"+wav_file],
+            cmds = ["python", "-m", "auto_subtitle" "/workspace/data/"+ file_prefix +".wav"],
             name="task-"+project+"-whisper",
             task_id="task-"+project+"-whisper",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
