@@ -67,7 +67,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/"+file_prefix+"13.srt", collection],
+            cmds = ["python", "correction.py", "/opt/data/"+file_prefix+".srt", collection],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
