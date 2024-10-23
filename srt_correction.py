@@ -21,6 +21,7 @@ def create_dag(schedule, default_args):
     dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
 
     secret_env = Secret("env",None,"lecture-rag")
+    s3_secret = Secret("env",None,"s3")
     volume = k8s.V1Volume(
         name="efs-claim",
         persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="efs-claim"),
@@ -30,6 +31,25 @@ def create_dag(schedule, default_args):
         mount_path="/opt/data"
     )
     with dag:
+
+        prepare =  KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_policy='Always',
+            cmds = ["python", "prepare.py", "13.srt"],
+            name="task-"+project+"-prepare",
+            task_id="task-"+project+"-prepare",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            secrets = [s3_secret],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
+        )
+            
         srt_correction =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
@@ -47,7 +67,26 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
-        srt_correction
+
+        cleanup =  KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_policy='Always',
+            cmds = ["python", "cleanup.py", "13_rag.srt", "13_rag.srt"],
+            name="task-"+project+"-prepare",
+            task_id="task-"+project+"-prepare",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            secrets = [s3_secret],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
+        )
+
+        prepare >> srt_correction >> cleanup
 
     return dag
 
