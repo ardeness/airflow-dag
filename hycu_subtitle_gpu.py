@@ -27,6 +27,7 @@ def create_dag(schedule, default_args):
         is_paused_upon_creation=False,
         params={
             "file": Param("test.mp4", type="string"),
+            "file_prefix": Param("test", type="string"),
             "collection": Param("finance", type="string"),
         }
     )
@@ -60,10 +61,9 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
-        file = "{{ params.file}}"
-        collection = "{{ params.collection}}"
-        file_prefix = file.rsplit('.', 1)[0]
-        wav_file = file_prefix + ".wav"
+        file = "{{ params.file }}"
+        collection = "{{ params.collection }}"
+        file_prefix = "{{ params.file_prefix }}"
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
@@ -87,7 +87,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "linuxserver/ffmpeg:latest",
             image_pull_policy='Always',
-            cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+wav_file],
+            cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+ file_prefix + ".wav"],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
