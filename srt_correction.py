@@ -73,8 +73,8 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_policy='Always',
             cmds = ["python", "cleanup.py", "13_rag.srt", "13_rag.srt"],
-            name="task-"+project+"-prepare",
-            task_id="task-"+project+"-prepare",
+            name="task-"+project+"-cleanup",
+            task_id="task-"+project+"-cleanup",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
