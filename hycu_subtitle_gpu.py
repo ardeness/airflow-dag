@@ -85,7 +85,7 @@ def create_dag(schedule, default_args):
 
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
-            image = "linuxserver/ffmpeg:latest",
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/ffmpeg:latest",
             image_pull_policy='Always',
             cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+ file_prefix + ".wav"],
             name="task-"+project+"-wav-extractor",
