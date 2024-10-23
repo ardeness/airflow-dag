@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.configuration import conf
+ from airflow.models.param import Param
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
 from kubernetes.client import models as k8s
@@ -18,7 +19,17 @@ else:
 def create_dag(schedule, default_args):
     dag_id = 'srt_correction'
     project = 'hycu'
-    dag = DAG(dag_id, tags=[project], schedule_interval=schedule, default_args=default_args, is_paused_upon_creation=False)
+    dag = DAG(
+        dag_id,
+        tags=[project],
+        schedule_interval=schedule,
+        default_args=default_args,
+        is_paused_upon_creation=False,
+        params={
+            "file_prefix": Param("13", type="string"),
+            "collection": Param("test", type="string"),
+        }
+    )
 
     secret_env = Secret("env",None,"lecture-rag")
     s3_secret = Secret("env",None,"s3")
@@ -31,12 +42,14 @@ def create_dag(schedule, default_args):
         mount_path="/opt/data"
     )
     with dag:
+        file_prefix = "{{ params.file_prefix}}"
+        collection = "{{ params.collection}}"
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_policy='Always',
-            cmds = ["python", "prepare.py", "13.srt"],
+            cmds = ["python", "prepare.py", file_prefix+".srt"],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -54,7 +67,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/13.srt", "test"],
+            cmds = ["python", "correction.py", "/opt/data/"+file_prefix+"13.srt", collection],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -72,7 +85,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_policy='Always',
-            cmds = ["python", "cleanup.py", "13_rag.srt", "13_rag.srt"],
+            cmds = ["python", "cleanup.py", file_prefix+"_rag.srt", file_prefix+"_rag.srt"],
             name="task-"+project+"-cleanup",
             task_id="task-"+project+"-cleanup",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
