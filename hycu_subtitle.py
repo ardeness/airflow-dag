@@ -30,6 +30,7 @@ def create_dag(schedule, default_args):
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
             image = image,
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = [],
             name="task-"+project+"-wav-extractor",
@@ -44,6 +45,7 @@ def create_dag(schedule, default_args):
         voice_separator = KubernetesPodOperator(
             namespace=namespace,
             image = image,
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = [],
             name="task-"+project+"-voice-separator",
@@ -73,6 +75,7 @@ def create_dag(schedule, default_args):
         llm = KubernetesPodOperator(
             namespace=namespace,
             image = image,
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = [],
             name="task-"+project+"-llm",

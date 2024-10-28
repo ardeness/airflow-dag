@@ -68,6 +68,7 @@ def create_dag(schedule, default_args):
         prepare =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "prepare.py", file],
             name="task-"+project+"-prepare",
@@ -86,6 +87,7 @@ def create_dag(schedule, default_args):
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/ffmpeg:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+ file_prefix + ".wav"],
             name="task-"+project+"-wav-extractor",
@@ -137,6 +139,7 @@ def create_dag(schedule, default_args):
         srt_correction =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "correction.py", "/opt/data/"+file_prefix+"_sync_post.srt", collection],
             name="task-"+project+"-srt-correction",
@@ -154,6 +157,7 @@ def create_dag(schedule, default_args):
         cleanup =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "cleanup.py", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.srt"],
             name="task-"+project+"-cleanup",
