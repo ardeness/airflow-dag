@@ -50,7 +50,7 @@ def create_dag(schedule, default_args):
         name="efs-claim",
         mount_path="/workspace/data"
     )
-    whisper_compute_resources = k8s.V1ResourceRequirements(
+    asr_compute_resources = k8s.V1ResourceRequirements(
        #requests={"nvidia.com/gpu": "1"},
        limits={"nvidia.com/gpu": "1"}
     )
@@ -117,18 +117,18 @@ def create_dag(schedule, default_args):
         #     get_logs=True,
         # )
 
-        whisper = KubernetesPodOperator(
+        asr = KubernetesPodOperator(
             namespace=namespace,
             image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/auto-subtitle:latest',
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ file_prefix +".wav"],
-            name="task-"+project+"-whisper",
-            task_id="task-"+project+"-whisper",
+            name="task-"+project+"-asr",
+            task_id="task-"+project+"-asr",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
-            container_resources=whisper_compute_resources,
+            container_resources=asr_compute_resources,
             tolerations=[gpu_toleration],
             is_delete_operator_pod=True,
             get_logs=True,
@@ -172,7 +172,7 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
-        prepare >> wav_extractor >> whisper >> srt_correction >> cleanup
+        prepare >> wav_extractor >> asr >> srt_correction >> cleanup
 
     return dag
 
