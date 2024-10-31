@@ -134,7 +134,7 @@ def create_dag(schedule, default_args):
             get_logs=True,
             volumes=[volume],
             volume_mounts=[gpu_mount],
-            startup_timeout_seconds=1200
+            startup_timeout_seconds=3600
         )
         srt_correction =  KubernetesPodOperator(
             namespace=namespace,
