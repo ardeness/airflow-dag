@@ -88,7 +88,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", file_prefix+"_rag.score"],
+            cmds = ["python", "cleanup.py", file_prefix+"_rag.srt", file_prefix+"_rag.score"],
             name="task-"+project+"-cleanup",
             task_id="task-"+project+"-cleanup",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
