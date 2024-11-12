@@ -67,7 +67,7 @@ def create_dag(schedule, default_args):
         collection = "{{ params.collection }}"
         # file_prefix = "{{ params.file_prefix }}"
         # file_prefix = {{ params.file_prefix.rsplit('.', 1)[1] }}
-        file_prefix = "{{ params.file_prefix }}".rsplit('.', 1)[1]
+        file_prefix = "{{ params.file }}".rsplit('.', 1)[1]
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
