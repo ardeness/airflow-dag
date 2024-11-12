@@ -27,9 +27,10 @@ def create_dag(schedule, default_args):
         is_paused_upon_creation=False,
         params={
             "file": Param("test.mp4", type="string"),
-            "file_prefix": Param("test", type="string"),
+            # "file_prefix": Param("test", type="string"),
             "collection": Param("finance", type="string"),
-        }
+        },
+        render_template_as_native_obj=True,
     )
 
     secret_env = Secret("env",None,"lecture-rag")
@@ -61,9 +62,12 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
+        
         file = "{{ params.file }}"
         collection = "{{ params.collection }}"
-        file_prefix = "{{ params.file_prefix }}"
+        # file_prefix = "{{ params.file_prefix }}"
+        # file_prefix = {{ params.file_prefix.rsplit('.', 1)[1] }}
+        file_prefix = file.rsplit('.', 1)[1]
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
