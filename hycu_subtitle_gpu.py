@@ -30,8 +30,7 @@ def create_dag(schedule, default_args):
             "file": Param("test.mp4", type="string"),
             # "file_prefix": Param("test", type="string"),
             "collection": Param("finance", type="string"),
-        },
-        render_template_as_native_obj=True,
+        }
     )
 
     secret_env = Secret("env",None,"lecture-rag")
