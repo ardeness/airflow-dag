@@ -114,7 +114,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "dubbing.py", video_file, "/opt/data"+translated_file],
+            cmds = ["python", "dubbing.py", video_file, "/opt/data/"+translated_file],
             name="task-"+project+"-dubbing",
             task_id="task-"+project+"-dubbing",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
