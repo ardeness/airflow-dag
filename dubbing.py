@@ -90,24 +90,24 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        # upload =  KubernetesPodOperator(
-        #     namespace=namespace,
-        #     image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
-        #     image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-        #     image_pull_policy='IfNotPresent',
-        #     cmds = ["python", "cleanup.py", translated_file],
-        #     name="task-"+project+"-upload",
-        #     task_id="task-"+project+"-upload",
-        #     in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-        #     cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-        #     config_file=config_file,
-        #     #resources=compute_resources,
-        #     is_delete_operator_pod=True,
-        #     get_logs=True,
-        #     secrets = [s3_secret],
-        #     volumes=[volume],
-        #     volume_mounts=[volume_mount]
-        # )
+        upload =  KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
+            image_pull_policy='IfNotPresent',
+            cmds = ["python", "cleanup.py", translated_file],
+            name="task-"+project+"-upload",
+            task_id="task-"+project+"-upload",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            secrets = [s3_secret],
+            volumes=[volume],
+            volume_mounts=[volume_mount]
+        )
 
         dubbing = KubernetesPodOperator(
             namespace=namespace,
@@ -128,7 +128,7 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        prepare >> srt_translation >> dubbing
+        prepare >> srt_translation >> upload >> dubbing
 
     return dag
 
