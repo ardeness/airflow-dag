@@ -113,7 +113,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
+            image_pull_policy='Always',
             cmds = ["python", "dubbing.py", video_file, "/opt/data/"+translated_file],
             name="task-"+project+"-dubbing",
             task_id="task-"+project+"-dubbing",
