@@ -101,8 +101,8 @@ def create_dag(schedule, default_args):
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "cleanup.py", translated_file],
-            name="task-"+project+"-upload_translated_file",
-            task_id="task-"+project+"-upload_translated_file",
+            name="task-"+project+"-upload-translated-file",
+            task_id="task-"+project+"-upload-translated-file",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
