@@ -95,14 +95,14 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        upload =  KubernetesPodOperator(
+        upload_translated_file =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "cleanup.py", translated_file],
-            name="task-"+project+"-upload",
-            task_id="task-"+project+"-upload",
+            name="task-"+project+"-upload_translated_file",
+            task_id="task-"+project+"-upload_translated_file",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
@@ -139,8 +139,8 @@ def create_dag(schedule, default_args):
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["ffmpeg", "-i", "/mnt/"+video_file, "$(for f in /mnt/result/*.wav; do echo -n \"-i $f \"; done) -filter_complex \"$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n \"[$i:a:0]\"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]\" -map 0:v:0 -map \"[a]\" -c:v copy -c:a aac", "/mnt/"+merged_video_file],
-            name="task-"+project+"-wav-extractor",
-            task_id="task-"+project+"-wav-extractor",
+            name="task-"+project+"-merge-audio",
+            task_id="task-"+project+"-merge-audio",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
@@ -170,7 +170,7 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        prepare >> srt_translation >> upload >> dubbing >> merge_audio >> upload_dubbing_video
+        prepare >> srt_translation >> upload_translated_file >> dubbing >> merge_audio >> upload_dubbing_video
 
     return dag
 
