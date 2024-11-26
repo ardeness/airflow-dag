@@ -52,8 +52,8 @@ def create_dag(schedule, default_args):
         mount_path="/workspace/data"
     )
     asr_compute_resources = k8s.V1ResourceRequirements(
-       requests={"nvidia.com/gpu": "1", "memory": "100Gi"},
-       limits={"nvidia.com/gpu": "1", "memory": "100Gi"}
+       requests={"nvidia.com/gpu": "1", "memory": "50Gi"},
+       limits={"nvidia.com/gpu": "1", "memory": "50Gi"}
     )
     gpu_toleration = k8s.V1Toleration(
         key= "nvidia.com/gpu",
@@ -62,7 +62,7 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
-        
+
         file = "{{ params.file }}"
         collection = "{{ params.collection }}"
         # file_prefix = "{{ params.file_prefix }}"
