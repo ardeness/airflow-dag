@@ -138,7 +138,15 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/ffmpeg:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["ffmpeg", "-i", "/mnt/"+video_file, "$(for f in /mnt/result/*.wav; do echo -n \"-i $f \"; done) -filter_complex \"$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n \"[$i:a:0]\"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]\" -map 0:v:0 -map \"[a]\" -c:v copy -c:a aac", "/mnt/"+merged_video_file],
+            #cmds = ["ffmpeg", "-i", "/mnt/"+video_file, "$(for f in /mnt/result/*.wav; do echo -n \"-i $f \"; done) -filter_complex \"$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n \"[$i:a:0]\"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]\" -map 0:v:0 -map \"[a]\" -c:v copy -c:a aac", "/mnt/"+merged_video_file],
+            cmds=['/bin/bash', '-c'],
+            arguments=[
+                f"""
+                ffmpeg -i /mnt/{video_file} $(for f in /mnt/result/*.wav; do echo -n "-i $f "; done) \
+               -filter_complex "$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n "[$i:a:0]"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]" \
+               -map 0:v:0 -map "[a]" -c:v copy -c:a aac /mnt/{merged_video_file}
+                """
+            ],
             name="task-"+project+"-merge-audio",
             task_id="task-"+project+"-merge-audio",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
