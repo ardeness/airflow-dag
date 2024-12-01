@@ -29,8 +29,6 @@ def create_dag(schedule, default_args):
         params={
             "video_file": Param("test.mp4", type="string"),
             "srt_file": Param("test.srt", type="string"),
-            # "file_prefix": Param("test", type="string"),
-            # "collection": Param("finance", type="string"),
         }
     )
 
@@ -54,7 +52,6 @@ def create_dag(schedule, default_args):
 
         video_file = "{{ params.video_file }}"
         srt_file = "{{ params.srt_file }}"
-        translated_file = "{{ params.srt_file.rsplit('.', 1)[0] + '_claude.srt'}}"
         merged_video_file = "{{ params.video_file.rsplit('.', 1)[0] + '_dubbing.' + params.video_file.rsplit('.', 1)[1] }}"
 
         prepare =  KubernetesPodOperator(
@@ -76,50 +73,12 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        srt_translation =  KubernetesPodOperator(
-            namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
-            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='Always',
-            cmds = ["python", "translate.py", "/opt/data/"+srt_file, "/opt/data/"+translated_file],
-            name="task-"+project+"-srt-translate",
-            task_id="task-"+project+"-srt-translate",
-            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-            config_file=config_file,
-            #resources=compute_resources,
-            is_delete_operator_pod=True,
-            get_logs=True,
-            secrets = [secret_env],
-            volumes=[volume],
-            volume_mounts=[volume_mount]
-        )
-
-        upload_translated_file =  KubernetesPodOperator(
-            namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
-            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", translated_file],
-            name="task-"+project+"-upload-translated-file",
-            task_id="task-"+project+"-upload-translated-file",
-            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-            config_file=config_file,
-            #resources=compute_resources,
-            is_delete_operator_pod=True,
-            get_logs=True,
-            secrets = [s3_secret],
-            volumes=[volume],
-            volume_mounts=[volume_mount]
-        )
-
         dubbing = KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "dubbing.py", video_file, "/opt/data/"+translated_file],
+            cmds = ["python", "dubbing.py", video_file, "/opt/data/"+srt_file],
             name="task-"+project+"-dubbing",
             task_id="task-"+project+"-dubbing",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -178,7 +137,7 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        prepare >> srt_translation >> upload_translated_file >> dubbing >> merge_audio >> upload_dubbing_video
+        prepare >> dubbing >> merge_audio >> upload_dubbing_video
 
     return dag
 
