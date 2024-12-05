@@ -43,6 +43,10 @@ def create_dag(schedule, default_args):
         name="efs-claim",
         mount_path="/opt/data"
     )
+    bash_mount = k8s.V1VolumeMount(
+        name="efs-claim",
+        mount_path="/mnt"
+    )
     wav_mount =  k8s.V1VolumeMount(
         name="efs-claim",
         mount_path="/mnt"
@@ -62,19 +66,37 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
-
+        run_id = "{{ run_id }}"
         file = "{{ params.file }}"
         collection = "{{ params.collection }}"
         # file_prefix = "{{ params.file_prefix }}"
         # file_prefix = {{ params.file_prefix.rsplit('.', 1)[1] }}
         file_prefix = "{{ params.file.rsplit('.', 1)[0] }}"
 
+        init = KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
+            image_pull_policy='Always',
+            cmds = ["mkdir", "/mnt/"+run_id],
+            name="task-"+project+"-init",
+            task_id="task-"+project+"-init",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            volumes=[volume],
+            volume_mounts=[bash_mount]
+        )
+
         prepare =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "prepare.py", file],
+            cmds = ["python", "prepare.py", run_id, collection, file],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -93,7 +115,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/ffmpeg:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["ffmpeg","-i", "/mnt/"+file, "-ar", "16000", "/mnt/"+ file_prefix + ".wav"],
+            cmds = ["ffmpeg","-i", "/mnt/"+run_id+'/'+file, "-ar", "16000", "/mnt/"+run_id+'/'+file_prefix + ".wav"],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -106,27 +128,12 @@ def create_dag(schedule, default_args):
             volume_mounts=[wav_mount]
         )
 
-        # voice_separator = KubernetesPodOperator(
-        #     namespace=namespace,
-        #     image = image,
-        #     image_pull_policy='IfNotPresent',
-        #     cmds = [],
-        #     name="task-"+project+"-voice-separator",
-        #     task_id="task-"+project+"-voice-separator",
-        #     in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-        #     cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-        #     config_file=config_file,
-        #     #resources=compute_resources,
-        #     is_delete_operator_pod=True,
-        #     get_logs=True,
-        # )
-
         asr = KubernetesPodOperator(
             namespace=namespace,
             image = '024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/auto-subtitle:latest',
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ file_prefix +".wav"],
+            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav"],
             name="task-"+project+"-asr",
             task_id="task-"+project+"-asr",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -145,7 +152,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/"+file_prefix+"_sync_post", collection],
+            cmds = ["python", "correction.py", "/opt/data/"+ run_id + '/' + file_prefix+"_sync_post", collection],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -158,14 +165,15 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
-        cleanup =  KubernetesPodOperator(
+
+        upload_srt =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.score"],
-            name="task-"+project+"-cleanup",
-            task_id="task-"+project+"-cleanup",
+            cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.score"],
+            name="task-"+project+"-upload-srt",
+            task_id="task-"+project+"-upload-srt",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
@@ -176,7 +184,25 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
-        prepare >> wav_extractor >> asr >> srt_correction >> cleanup
+
+        cleanup = KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
+            image_pull_policy='Always',
+            cmds = ["rm", "-rf", "/mnt/"+run_id],
+            name="task-"+project+"-cleanup",
+            task_id="task-"+project+"-cleanup",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            volumes=[volume],
+            volume_mounts=[bash_mount]
+        )
+        init >> prepare >> wav_extractor >> asr >> srt_correction >> upload_srt >> cleanup
 
     return dag
 
