@@ -29,8 +29,7 @@ def create_dag(schedule, default_args):
         params={
             "video_file": Param("test.mp4", type="string"),
             "srt_file": Param("test.srt", type="string"),
-            # "file_prefix": Param("test", type="string"),
-            # "collection": Param("finance", type="string"),
+            "collection": Param("test", type="string")
         }
     )
 
@@ -49,20 +48,44 @@ def create_dag(schedule, default_args):
         name="efs-claim",
         mount_path="/mnt"
     )
+    bash_mount = k8s.V1VolumeMount(
+        name="efs-claim",
+        mount_path="/mnt"
+    )
 
     with dag:
 
+        run_id = "{{ run_id }}"
+        collection = "{{ params.collection }}"
         video_file = "{{ params.video_file }}"
         srt_file = "{{ params.srt_file }}"
         translated_file = "{{ params.srt_file.rsplit('.', 1)[0] + '_claude.srt'}}"
         merged_video_file = "{{ params.video_file.rsplit('.', 1)[0] + '_dubbing.' + params.video_file.rsplit('.', 1)[1] }}"
+
+        init = KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
+            image_pull_policy='Always',
+            cmds = ["mkdir", "/mnt/"+run_id],
+            name="task-"+project+"-init",
+            task_id="task-"+project+"-init",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            volumes=[volume],
+            volume_mounts=[bash_mount]
+        )
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "prepare.py", video_file, srt_file],
+            cmds = ["python", "prepare.py", run_id, collection, video_file, srt_file],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -81,7 +104,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "translate.py", "/opt/data/"+srt_file, "/opt/data/"+translated_file],
+            cmds = ["python", "translate.py", "/opt/data/"+run_id+'/'+srt_file, "/opt/data/"+run_id+'/'+translated_file],
             name="task-"+project+"-srt-translate",
             task_id="task-"+project+"-srt-translate",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -100,7 +123,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", translated_file],
+            cmds = ["python", "cleanup.py", run_id, collection, translated_file],
             name="task-"+project+"-upload-translated-file",
             task_id="task-"+project+"-upload-translated-file",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -119,7 +142,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "dubbing.py", video_file, "/opt/data/"+translated_file],
+            cmds = ["python", "dubbing.py", collection+'/'+video_file, "/opt/data/"+run_id+'/'+translated_file],
             name="task-"+project+"-dubbing",
             task_id="task-"+project+"-dubbing",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -142,9 +165,9 @@ def create_dag(schedule, default_args):
             cmds=['/bin/bash', '-c'],
             arguments=[
                 f"""
-                ffmpeg -i /mnt/{video_file} $(for f in /mnt/result/*.wav; do echo -n "-i $f "; done) \
-               -filter_complex "$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n "[$i:a:0]"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]" \
-               -map 0:v:0 -map "[a]" -c:v copy -c:a aac /mnt/{merged_video_file}
+                ffmpeg -i /mnt/{run_id}/{video_file} $(for f in /mnt/{run_id}/result/*.wav; do echo -n "-i $f "; done) \
+               -filter_complex "$(for i in $(seq 1 $(ls /mnt/{run_id}/result/*.wav | wc -l)); do echo -n "[$i:a:0]"; done)amix=inputs=$(ls /mnt/{run_id}/result/*.wav | wc -l):duration=longest[a]" \
+               -map 0:v:0 -map "[a]" -c:v copy -c:a aac /mnt/{run_id}/{merged_video_file}
                 """
             ],
             name="task-"+project+"-merge-audio",
@@ -164,7 +187,7 @@ def create_dag(schedule, default_args):
             image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", merged_video_file],
+            cmds = ["python", "cleanup.py", run_id, collection, merged_video_file],
             name="task-"+project+"-upload-dubbing-video",
             task_id="task-"+project+"-upload-dubbing-video",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -178,7 +201,25 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        prepare >> srt_translation >> upload_translated_file >> dubbing >> merge_audio >> upload_dubbing_video
+        cleanup = KubernetesPodOperator(
+            namespace=namespace,
+            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
+            image_pull_policy='Always',
+            cmds = ["rm", "-rf", "/mnt/"+run_id],
+            name="task-"+project+"-cleanup",
+            task_id="task-"+project+"-cleanup",
+            in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
+            cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
+            config_file=config_file,
+            #resources=compute_resources,
+            is_delete_operator_pod=True,
+            get_logs=True,
+            volumes=[volume],
+            volume_mounts=[bash_mount]
+        )
+
+        init >> prepare >> srt_translation >> upload_translated_file >> dubbing >> merge_audio >> upload_dubbing_video >> cleanup
 
     return dag
 
