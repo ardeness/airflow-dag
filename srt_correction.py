@@ -5,9 +5,11 @@ from airflow.configuration import conf
 from airflow.models.param import Param
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
+from airflow.models.variable import Variable
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
+container_repository = Variable.get("ECR_REPOSITORY")
 
 if namespace =='default':
     config_file = '/usr/local/airflow/include/.kube/config'
@@ -54,7 +56,7 @@ def create_dag(schedule, default_args):
 
         init = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["mkdir", "/mnt/"+run_id],
@@ -72,7 +74,7 @@ def create_dag(schedule, default_args):
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "prepare.py", run_id, collection, file_prefix+".srt", file_prefix+".score"],
@@ -91,7 +93,7 @@ def create_dag(schedule, default_args):
 
         srt_correction =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/lecture-rag:latest",
+            image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "correction.py", "/opt/data/"+run_id+'/'+file_prefix, collection],
@@ -110,7 +112,7 @@ def create_dag(schedule, default_args):
 
         upload =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_rag.srt", file_prefix+"_rag.score"],
@@ -129,7 +131,7 @@ def create_dag(schedule, default_args):
 
         cleanup = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["rm", "-rf", "/mnt/"+run_id],

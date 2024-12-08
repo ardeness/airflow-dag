@@ -6,9 +6,11 @@ from airflow.models.param import Param
 #from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
+from airflow.models.variable import Variable
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
+container_repository = Variable.get("ECR_REPOSITORY")
 
 if namespace =='default':
     config_file = '/usr/local/airflow/include/.kube/config'
@@ -63,7 +65,7 @@ def create_dag(schedule, default_args):
 
         init = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["mkdir", "/mnt/"+run_id],
@@ -81,7 +83,7 @@ def create_dag(schedule, default_args):
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "prepare.py", run_id, collection, video_file, srt_file],
@@ -100,7 +102,7 @@ def create_dag(schedule, default_args):
 
         dubbing = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
+            image = container_repository+"/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "dubbing.py", collection+'/'+video_file, "/opt/data/"+run_id+'/'+srt_file],
@@ -119,7 +121,7 @@ def create_dag(schedule, default_args):
 
         merge_audio = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/ffmpeg:latest",
+            image = container_repository+"/hycu/ffmpeg:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             #cmds = ["ffmpeg", "-i", "/mnt/"+run_id+'/'+video_file, "$(for f in /mnt/result/*.wav; do echo -n \"-i $f \"; done) -filter_complex \"$(for i in $(seq 1 $(ls /mnt/result/*.wav | wc -l)); do echo -n \"[$i:a:0]\"; done)amix=inputs=$(ls /mnt/result/*.wav | wc -l):duration=longest[a]\" -map 0:v:0 -map \"[a]\" -c:v copy -c:a aac", "/mnt/"+merged_video_file],
@@ -145,7 +147,7 @@ def create_dag(schedule, default_args):
 
         upload_dubbing_video =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "cleanup.py", run_id, collection, merged_video_file],
@@ -164,7 +166,7 @@ def create_dag(schedule, default_args):
 
         cleanup = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["rm", "-rf", "/mnt/"+run_id],

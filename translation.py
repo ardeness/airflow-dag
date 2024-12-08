@@ -6,9 +6,11 @@ from airflow.models.param import Param
 #from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
+from airflow.models.variable import Variable
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
+container_repository = Variable.get("ECR_REPOSITORY")
 
 if namespace =='default':
     config_file = '/usr/local/airflow/include/.kube/config'
@@ -55,7 +57,7 @@ def create_dag(schedule, default_args):
 
         init = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["mkdir", "/mnt/"+run_id],
@@ -73,7 +75,7 @@ def create_dag(schedule, default_args):
 
         download_file =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "prepare.py", run_id, collection, srt_file],
@@ -92,7 +94,7 @@ def create_dag(schedule, default_args):
 
         srt_translation =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/dubbing:latest",
+            image = container_repository+"/hycu/dubbing:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "translate.py", "/opt/data/"+run_id+"/"+srt_file, "/opt/data/"+run_id+"/"+translated_file],
@@ -111,7 +113,7 @@ def create_dag(schedule, default_args):
 
         upload_translated_file =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "cleanup.py", run_id, collection, translated_file],
@@ -130,7 +132,7 @@ def create_dag(schedule, default_args):
 
         cleanup = KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/bash:latest",
+            image = container_repository+"/hycu/bash:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["rm", "-rf", "/mnt/"+run_id],
