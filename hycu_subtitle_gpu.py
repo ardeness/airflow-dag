@@ -143,7 +143,7 @@ def create_dag(schedule, default_args):
             config_file=config_file,
             container_resources=asr_compute_resources,
             tolerations=[gpu_toleration],
-            is_delete_operator_pod=False,
+            is_delete_operator_pod=True,
             get_logs=True,
             volumes=[volume],
             volume_mounts=[gpu_mount],
