@@ -138,6 +138,7 @@ def create_dag(schedule, default_args):
             cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav"],
             name="task-"+project+"-asr",
             task_id="task-"+project+"-asr",
+            annotations={"karpenter.sh/do-not-disrupt","true"},
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
