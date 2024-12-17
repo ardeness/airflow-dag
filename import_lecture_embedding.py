@@ -95,7 +95,7 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
+            image_pull_policy='Always',
             cmds = ["python", "embedding_extract.py", "/opt/data/"+run_id+'/'+file, collection],
             name="task-"+project+"-import-lecture-embedding",
             task_id="task-"+project+"-import-lecture-embedding",
