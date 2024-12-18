@@ -30,7 +30,7 @@ def create_dag(schedule, default_args):
         params={
             "file": Param("13", type="string"),
             "collection": Param("test", type="string"),
-            "metadata": Param("key1:value1, key2:value2", type="string"),
+            "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
         }
     )
     secret_env = Secret("env",None,"lecture-rag")
