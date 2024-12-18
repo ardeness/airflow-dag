@@ -30,6 +30,7 @@ def create_dag(schedule, default_args):
         params={
             "file_prefix": Param("13", type="string"),
             "collection": Param("test", type="string"),
+            "metadata": Param("key1:value1, key2:value2", type="string"),
         }
     )
 
@@ -53,6 +54,8 @@ def create_dag(schedule, default_args):
         run_id = "{{ run_id }}"
         file_prefix = "{{ params.file_prefix }}"
         collection = "{{ params.collection }}"
+        metadata = " {{ params.metadata.replace(' ', '') }}"
+
 
         init = KubernetesPodOperator(
             namespace=namespace,
@@ -96,7 +99,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/"+run_id+'/'+file_prefix, collection],
+            cmds = ["python", "correction.py", "/opt/data/"+run_id+'/'+file_prefix, collection, metadata],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
