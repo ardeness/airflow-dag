@@ -97,7 +97,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "embedding_extract.py", "/opt/data/"+run_id+'/'+file, collection],
+            cmds = ["python", "embedding_extract.py", "/opt/data/"+run_id+'/'+file, collection, metadata],
             name="task-"+project+"-import-lecture-embedding",
             task_id="task-"+project+"-import-lecture-embedding",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
