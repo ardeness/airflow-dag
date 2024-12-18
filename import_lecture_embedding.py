@@ -54,6 +54,7 @@ def create_dag(schedule, default_args):
         run_id = "{{ run_id }}"
         file = "{{ params.file}}"
         collection = "{{ params.collection}}"
+        metadata = " {{ params.metadata.replace(' ', '') }}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
