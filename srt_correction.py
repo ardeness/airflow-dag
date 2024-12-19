@@ -7,7 +7,7 @@ from airflow.models.param import Param
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
 from airflow.models.variable import Variable
-from airflow.providers.slack.notifications.slack import send_slack_notification
+from airflow.providers.slack.notifications.slack_webhook import send_slack_webhook_notification
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes_executor', 'NAMESPACE') # This will detect the default namespace locally and read the
@@ -35,19 +35,13 @@ def create_dag(schedule, default_args):
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
         },
         on_success_callback=[
-            send_slack_notification(
-                slack_conn_id="slack_api_default",
-                text="The DAG {{ dag.dag_id }} succeeded",
-                channel="#airflow-slack-test",
-                username="airflow-notification",
+            send_slack_webhook_notification(
+                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} failed"
             )
         ],
         on_failure_callback=[
-            send_slack_notification(
-                slack_conn_id="slack_api_default",
-                text="The task {{ dag.dag_id }} failed",
-                channel="#airflow-slack-test",
-                username="airflow-notification",
+            send_slack_webhook_notification(
+                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} failed"
             )
         ],
     )
