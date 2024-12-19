@@ -36,6 +36,7 @@ def create_dag(schedule, default_args):
         },
         on_success_callback=[
             send_slack_notification(
+                slack_conn_id="slack",
                 text="The DAG {{ dag.dag_id }} succeeded",
                 channel="#airflow-slack-test",
                 username="airflow-notification",
@@ -43,6 +44,7 @@ def create_dag(schedule, default_args):
         ],
         on_failure_callback=[
             send_slack_notification(
+                slack_conn_id="slack",
                 text="The task {{ ti.task_id }} failed",
                 channel="#airflow-slack-test",
                 username="airflow-notification",
