@@ -6,6 +6,7 @@ from airflow.models.param import Param
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.providers.cncf.kubernetes.secret import Secret
 from airflow.models.variable import Variable
+from airflow.providers.slack.notifications.slack import send_slack_notification
 from kubernetes.client import models as k8s
 
 namespace = conf.get('kubernetes', 'NAMESPACE') # This will detect the default namespace locally and read the
@@ -31,7 +32,21 @@ def create_dag(schedule, default_args):
             "file_prefix": Param("13", type="string"),
             "collection": Param("test", type="string"),
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
-        }
+        },
+        on_success_callback=[
+            send_slack_notification(
+                text="The DAG {{ dag.dag_id }} succeeded",
+                channel="#airflow-slack-test",
+                username="Airflow",
+            )
+        ],
+        on_failure_callback=[
+            send_slack_notification(
+                text="The task {{ ti.task_id }} failed",
+                channel="#airflow-slack-test",
+                username="Airflow",
+            )
+        ],
     )
 
     secret_env = Secret("env",None,"lecture-rag")
