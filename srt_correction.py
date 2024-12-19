@@ -36,7 +36,7 @@ def create_dag(schedule, default_args):
         },
         on_success_callback=[
             send_slack_webhook_notification(
-                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} failed"
+                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} success"
             )
         ],
         on_failure_callback=[
