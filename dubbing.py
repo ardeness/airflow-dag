@@ -31,7 +31,7 @@ def create_dag(schedule, default_args):
         params={
             "video_file": Param("test.mp4", type="string"),
             "srt_file": Param("test.srt", type="string"),
-            "collection": Param("test", type="string")
+            "collection": Param("test", type="string"),
         }
     )
 
