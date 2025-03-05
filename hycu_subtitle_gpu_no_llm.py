@@ -133,7 +133,7 @@ def create_dag(schedule, default_args):
 
         asr = KubernetesPodOperator(
             namespace=namespace,
-            image = container_repository+"/hycu/auto-subtitle:latest",
+            image = container_repository+"/hycu/auto-subtitle:gpu",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav"],
