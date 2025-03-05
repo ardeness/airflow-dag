@@ -96,7 +96,7 @@ def create_dag(schedule, default_args):
 
         prepare =  KubernetesPodOperator(
             namespace=namespace,
-            image = "024848470331.dkr.ecr.ap-northeast-2.amazonaws.com/hycu/setup:latest",
+            image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
             cmds = ["python", "prepare.py", run_id, collection, file],
