@@ -187,7 +187,7 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[bash_mount]
         )
-        init >> prepare >> wav_extractor >> asr >> srt_correction >> upload_srt >> cleanup
+        init >> prepare >> wav_extractor >> asr >> upload_srt >> cleanup
 
     return dag
 
