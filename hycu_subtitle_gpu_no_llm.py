@@ -82,6 +82,7 @@ def create_dag(schedule, default_args):
         curriCode = "{{ params.curriCode }}"
         file_prefix = "{{ params.curriCode + '_' + params.week + '_' + params.week_seq }}"
         metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
+        resultFileName = " {{ params.resultFileName }}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
