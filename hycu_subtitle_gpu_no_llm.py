@@ -77,10 +77,10 @@ def create_dag(schedule, default_args):
 
     with dag:
         run_id = "{{ run_id }}"
-        file = "{{ params.curriCode + '_' + params.week + '_' + params.week_seq + '.mp4' }}"
+        file = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq + '.mp4' }}"
         proxyUrl = "{{ params.proxyUrl }}"
         curriCode = "{{ params.curriCode }}"
-        file_prefix = "{{ params.curriCode + '_' + params.week + '_' + params.week_seq }}"
+        file_prefix = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq }}"
         metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
         resultFileName = " {{ params.resultFileName }}"
 
