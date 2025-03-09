@@ -65,9 +65,13 @@ def create_dag(schedule, default_args):
         name="efs-claim",
         mount_path="/workspace/data"
     )
+    #asr_compute_resources = k8s.V1ResourceRequirements(
+    #   requests={"nvidia.com/gpu": "1", "memory": "23Gi"},
+    #   limits={"nvidia.com/gpu": "1", "memory": "23Gi"}
+    #)
     asr_compute_resources = k8s.V1ResourceRequirements(
-       requests={"nvidia.com/gpu": "1", "memory": "23Gi"},
-       limits={"nvidia.com/gpu": "1", "memory": "23Gi"}
+       requests={"nvidia.com/gpu": "1"},
+       limits={"nvidia.com/gpu": "1"}
     )
     gpu_toleration = k8s.V1Toleration(
         key= "nvidia.com/gpu",
