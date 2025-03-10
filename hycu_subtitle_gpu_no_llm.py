@@ -162,7 +162,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/auto-subtitle:gpu",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav"],
+            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav", "--max_length=40", "--max_lines=1"],
             name="task-"+project+"-asr",
             task_id="task-"+project+"-asr",
             annotations={"karpenter.sh/do-not-disrupt": "true"},
