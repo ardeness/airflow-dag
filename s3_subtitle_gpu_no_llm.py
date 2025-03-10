@@ -152,7 +152,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.score"],
+            cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score"],
 
             name="task-"+project+"-upload-srt",
             task_id="task-"+project+"-upload-srt",
