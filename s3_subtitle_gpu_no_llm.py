@@ -161,7 +161,7 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [s3_secret, cms_ftp_secret],
+            secrets = [s3_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
