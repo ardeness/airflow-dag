@@ -29,15 +29,23 @@ def create_dag(schedule, default_args):
         default_args=default_args,
         is_paused_upon_creation=False,
         params={
-            "file": Param("test.mp4", type="string"),
+            #"file": Param("test.mp4", type="string"),
             # "file_prefix": Param("test", type="string"),
-            "collection": Param("finance", type="string"),
+            #"collection": Param("finance", type="string"),
+            "curriName": Param("기술경영과전략|2주차|OT", type="string"),
+            "term": Param("202110", type="string"),
+            "curriCode": Param("41XDA", type="string"),
+            "week": Param("2", type="string"),
+            "week_seq": Param("00", type="string"),
+            "proxyUrl": Param("http://1.235.46.154:20880/CmsData/VideoProxy/2025/02/26/CT_V000000010002/CT_V000000010002.mp4", type="string"),
+            "resultFileName": Param("CT_V000000010002.json", type="string"),
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
         }
     )
 
-    secret_env = Secret("env",None,"lecture-rag")
+    lecture_secret = Secret("env",None,"lecture-rag")
     s3_secret = Secret("env",None,"s3")
+    cms_ftp_secret = Secret("env", None, "cms-ftp")
     volume = k8s.V1Volume(
         name="efs-claim",
         persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="efs-claim"),
@@ -70,12 +78,12 @@ def create_dag(schedule, default_args):
 
     with dag:
         run_id = "{{ run_id }}"
-        file = "{{ params.file }}"
-        collection = "{{ params.collection }}"
-        # file_prefix = "{{ params.file_prefix }}"
-        # file_prefix = {{ params.file_prefix.rsplit('.', 1)[1] }}
-        file_prefix = "{{ params.file.rsplit('.', 1)[0] }}"
+        file = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq + '.mp4' }}"
+        proxyUrl = "{{ params.proxyUrl }}"
+        curriCode = "{{ params.curriCode }}"
+        file_prefix = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq }}"
         metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
+        resultFileName = " {{ params.resultFileName }}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
@@ -99,8 +107,8 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
-            cmds = ["python", "prepare.py", run_id, collection, file],
+            image_pull_policy='Always',
+            cmds = ["python", "hycu_cms_prepare.py", run_id, proxyUrl, file],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -109,16 +117,16 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [s3_secret],
             volumes=[volume],
-            volume_mounts=[volume_mount]
+            volume_mounts=[volume_mount],
+            on_failure_callback=None,
         )
 
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/ffmpeg:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
+            image_pull_policy='Always',
             cmds = ["ffmpeg","-i", "/mnt/"+run_id+'/'+file, "-ar", "16000", "/mnt/"+run_id+'/'+file_prefix + ".wav"],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
@@ -134,10 +142,10 @@ def create_dag(schedule, default_args):
 
         asr = KubernetesPodOperator(
             namespace=namespace,
-            image = container_repository+"/hycu/auto-subtitle:latest",
+            image = container_repository+"/hycu/auto-subtitle:gpu",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
-            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav"],
+            image_pull_policy='Always',
+            cmds = ["python", "-m", "auto_subtitle", "/workspace/data/"+ run_id + '/' + file_prefix +".wav", "--max_length=40", "--max_lines=1"],
             name="task-"+project+"-asr",
             task_id="task-"+project+"-asr",
             annotations={"karpenter.sh/do-not-disrupt": "true"},
@@ -152,12 +160,13 @@ def create_dag(schedule, default_args):
             volume_mounts=[gpu_mount],
             startup_timeout_seconds=3600
         )
+
         srt_correction =  KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/"+ run_id + '/' + file_prefix+"_sync_post", collection, metadata],
+            cmds = ["python", "correction.py", "/opt/data/"+ run_id + '/' + file_prefix+"_sync_post", curriCode, metadata],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -166,7 +175,7 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [secret_env],
+            secrets = [lecture_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
@@ -175,8 +184,8 @@ def create_dag(schedule, default_args):
             namespace=namespace,
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
-            cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.score"],
+            image_pull_policy='Always',
+            cmds = ["python", "hycu_cms_cleanup.py", run_id, curriCode, file_prefix+"_sync_post_rag.score", resultFileName, file_prefix+".wav", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post_rag.score"],
             name="task-"+project+"-upload-srt",
             task_id="task-"+project+"-upload-srt",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -185,7 +194,7 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [s3_secret],
+            secrets = [s3_secret, cms_ftp_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
@@ -220,6 +229,5 @@ default_args = {
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
 }
-
 
 globals()['hycu-subtitle-gpu'] = create_dag(None, default_args)
