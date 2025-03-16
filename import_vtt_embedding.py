@@ -96,14 +96,14 @@ def create_dag(schedule, default_args):
             volume_mounts=[volume_mount]
         )
 
-        import_lecture_embedding =  KubernetesPodOperator(
+        import_vtt_embedding =  KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
             cmds = ["python", "vtt_embedding_extract.py", "/opt/data/"+run_id+'/'+file, curriCode, metadata],
-            name="task-"+project+"-import-lecture-embedding",
-            task_id="task-"+project+"-import-lecture-embedding",
+            name="task-"+project+"-import-vtt-embedding",
+            task_id="task-"+project+"-import-vtt-embedding",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
@@ -152,7 +152,7 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[bash_mount]
         )
-        init >> prepare >> import_lecture_embedding >> cleanup
+        init >> prepare >> import_vtt_embedding >> cleanup
 
     return dag
 
