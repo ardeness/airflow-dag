@@ -30,24 +30,29 @@ def create_dag(schedule, default_args):
         default_args=default_args,
         is_paused_upon_creation=False,
         params={
-            "file_prefix": Param("13", type="string"),
-            "collection": Param("test", type="string"),
+            "curriName": Param("기술경영과전략|2주차|OT", type="string"),
+            "term": Param("202110", type="string"),
+            "curriCode": Param("41XDA", type="string"),
+            "week": Param("2", type="string"),
+            "week_seq": Param("00", type="string"),
+            "resultFileName": Param("CT_V000000010002.json", type="string"),
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
-        },
-        on_success_callback=[
-            send_slack_webhook_notification(
-                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} success"
-            )
-        ],
-        on_failure_callback=[
-            send_slack_webhook_notification(
-                slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} failed"
-            )
-        ],
+        }
+        # on_success_callback=[
+        #     send_slack_webhook_notification(
+        #         slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} success"
+        #     )
+        # ],
+        # on_failure_callback=[
+        #     send_slack_webhook_notification(
+        #         slack_webhook_conn_id="slackwebhook", text="The dag {{ dag.dag_id }} failed"
+        #     )
+        # ],
     )
 
-    secret_env = Secret("env",None,"lecture-rag")
+    lecture_secret = Secret("env",None,"lecture-rag")
     s3_secret = Secret("env",None,"s3")
+    cms_ftp_secret = Secret("env", None, "cms-ftp")
     volume = k8s.V1Volume(
         name="efs-claim",
         persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(claim_name="efs-claim"),
@@ -62,12 +67,11 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
-
         run_id = "{{ run_id }}"
-        file_prefix = "{{ params.file_prefix }}"
-        collection = "{{ params.collection }}"
+        curriCode = "{{ params.curriCode }}"
+        file_prefix = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq }}"
         metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
-
+        resultFileName = " {{ params.resultFileName }}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
@@ -92,7 +96,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='IfNotPresent',
-            cmds = ["python", "prepare.py", run_id, collection, file_prefix+".srt", file_prefix+".score"],
+            cmds = ["python", "prepare.py", run_id, curriCode, file_prefix+".srt", file_prefix+".score"],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -111,7 +115,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "correction.py", "/opt/data/"+run_id+'/'+file_prefix, collection, metadata],
+            cmds = ["python", "correction.py", "/opt/data/"+run_id+'/'+file_prefix, curriCode, metadata],
             name="task-"+project+"-srt-correction",
             task_id="task-"+project+"-srt-correction",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -120,26 +124,26 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [secret_env],
+            secrets = [lecture_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
 
-        upload =  KubernetesPodOperator(
+        upload_srt =  KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "cleanup.py", run_id, collection, file_prefix+"_rag.srt", file_prefix+"_rag.score"],
-            name="task-"+project+"-upload",
-            task_id="task-"+project+"-upload",
+            cmds = ["python", "hycu_cms_cleanup.py", run_id, curriCode, file_prefix+"_sync_post_rag.score", resultFileName, file_prefix+".wav", file_prefix+"_sync_post.srt", file_prefix+"_sync_post.score", file_prefix+"_sync_post_rag.srt", file_prefix+"_sync_post_rag.score"],
+            name="task-"+project+"-upload-srt",
+            task_id="task-"+project+"-upload-srt",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
             cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
             config_file=config_file,
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [s3_secret],
+            secrets = [s3_secret, cms_ftp_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
@@ -162,7 +166,7 @@ def create_dag(schedule, default_args):
             volume_mounts=[bash_mount]
         )
 
-        init >> prepare >> srt_correction >> upload >> cleanup
+        init >> prepare >> srt_correction >> upload_srt >> cleanup
 
     return dag
 
