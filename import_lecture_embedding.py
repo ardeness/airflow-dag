@@ -19,7 +19,7 @@ else:
     config_file = None
 
 def create_dag(schedule, default_args):
-    dag_id = 'import_lecture_embedding'
+    dag_id = 'import-lecture-embedding'
     project = 'hycu'
     dag = DAG(
         dag_id,
@@ -28,13 +28,17 @@ def create_dag(schedule, default_args):
         default_args=default_args,
         is_paused_upon_creation=False,
         params={
-            "file": Param("13", type="string"),
-            "collection": Param("test", type="string"),
+            "curriName": Param("기술경영과전략|2주차|OT", type="string"),
+            "term": Param("202110", type="string"),
+            "curriCode": Param("41XDA", type="string"),
+            "week": Param("2", type="string"),
+            "week_seq": Param("00", type="string"),
+            "proxyUrl": Param("http://1.235.46.154:20880/CmsData/VideoProxy/2025/02/26/CT_V000000010002/CT_V000000010002.mp4", type="string"),
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
         }
     )
     secret_env = Secret("env",None,"lecture-rag")
-    s3_secret = Secret("env",None,"s3")
+    #s3_secret = Secret("env",None,"s3")
 
     volume = k8s.V1Volume(
         name="efs-claim",
@@ -50,11 +54,11 @@ def create_dag(schedule, default_args):
     )
 
     with dag:
-
         run_id = "{{ run_id }}"
-        file = "{{ params.file}}"
-        collection = "{{ params.collection}}"
-        metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
+        file = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq}}"
+        proxyUrl = "{{ params.proxyUrl }}"
+        curriCode = "{{ params.curriCode }}"
+        metadata = " {{ 'term:'+params.term+',week:'+params.week+',seq:'+params.week_seq'+ (','+params.metadata.replace(' ', '') if params.metadata else '')}}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
@@ -74,12 +78,12 @@ def create_dag(schedule, default_args):
             volume_mounts=[bash_mount]
         )
 
-        prepare =  KubernetesPodOperator(
+        prepare = KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/setup:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-            image_pull_policy='IfNotPresent',
-            cmds = ["python", "prepare.py", run_id, collection, file],
+            image_pull_policy='Always',
+            cmds = ["python", "hycu_cms_prepare.py", run_id, proxyUrl, file],
             name="task-"+project+"-prepare",
             task_id="task-"+project+"-prepare",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -88,17 +92,16 @@ def create_dag(schedule, default_args):
             #resources=compute_resources,
             is_delete_operator_pod=True,
             get_logs=True,
-            secrets = [s3_secret],
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
 
-        import_lecture_embedding =  KubernetesPodOperator(
+        import_lecture_embedding = KubernetesPodOperator(
             namespace=namespace,
             image = container_repository+"/hycu/lecture-rag:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            cmds = ["python", "embedding_extract.py", "/opt/data/"+run_id+'/'+file, collection, metadata],
+            cmds = ["python", "embedding_extract.py", "/opt/data/"+run_id+'/'+file, curriCode, metadata],
             name="task-"+project+"-import-lecture-embedding",
             task_id="task-"+project+"-import-lecture-embedding",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
@@ -144,4 +147,4 @@ default_args = {
 }
 
 
-globals()['import_lecture_embedding'] = create_dag(None, default_args)
+globals()['import-lecture-embedding'] = create_dag(None, default_args)
