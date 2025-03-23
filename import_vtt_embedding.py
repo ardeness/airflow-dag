@@ -58,7 +58,7 @@ def create_dag(schedule, default_args):
         file = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq +'.vtt'}}"
         proxyUrl = "{{ params.proxyUrl }}"
         curriCode = "{{ params.curriCode }}"
-        metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
+        metadata = "{{ 'term:' + params.term + ',week:' + params.week + ',week_seq:' + params.week_seq + (',' if params.metadata else '') + (params.metadata.replace(' ', '') if params.metadata else '')}}"
 
         init = KubernetesPodOperator(
             namespace=namespace,
