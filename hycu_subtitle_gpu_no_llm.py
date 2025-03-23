@@ -35,7 +35,7 @@ def create_dag(schedule, default_args):
             "curriName": Param("기술경영과전략|2주차|OT", type="string"),
             "term": Param("202110", type="string"),
             "curriCode": Param("41XDA", type="string"),
-            "week": Param("2", type="string"),
+            "week": Param("02", type="string"),
             "week_seq": Param("00", type="string"),
             "proxyUrl": Param("http://1.235.46.154:20880/CmsData/VideoProxy/2025/02/26/CT_V000000010002/CT_V000000010002.mp4", type="string"),
             "resultFileName": Param("CT_V000000010002.json", type="string"),
@@ -119,25 +119,6 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[volume_mount]
         )
-
-        #prepare =  KubernetesPodOperator(
-        #    namespace=namespace,
-        #    image = container_repository+"/hycu/setup:latest",
-        #    image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
-        #    image_pull_policy='IfNotPresent',
-        #    cmds = ["python", "prepare.py", run_id, collection, file],
-        #    name="task-"+project+"-prepare",
-        #    task_id="task-"+project+"-prepare",
-        #    in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
-        #    cluster_context="docker-for-desktop",  # is ignored when in_cluster is set to True
-        #    config_file=config_file,
-        #    #resources=compute_resources,
-        #    is_delete_operator_pod=True,
-        #    get_logs=True,
-        #    secrets = [s3_secret],
-        #    volumes=[volume],
-        #    volume_mounts=[volume_mount]
-        #)
 
         wav_extractor = KubernetesPodOperator(
             namespace=namespace,
