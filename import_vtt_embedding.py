@@ -152,7 +152,7 @@ def create_dag(schedule, default_args):
             volumes=[volume],
             volume_mounts=[bash_mount]
         )
-        init >> prepare >> import_vtt_embedding >> cleanup
+        init >> prepare >> import_vtt_embedding >> upload_vtt >> cleanup
 
     return dag
 
