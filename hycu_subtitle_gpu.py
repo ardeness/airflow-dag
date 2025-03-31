@@ -132,7 +132,7 @@ def create_dag(schedule, default_args):
             arguments = [
                 "-c",
                 "ffmpeg -i /mnt/"+run_id+"/"+file+" -ar 16000 /mnt/"+run_id+"/"+file_prefix + ".wav &&",
-                "rm -f /mnt/"+run_id+"/"+file,
+                "rm -f /mnt/"+run_id+"/"+file+";",
             ],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
