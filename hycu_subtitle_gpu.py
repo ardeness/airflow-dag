@@ -81,7 +81,7 @@ def create_dag(schedule, default_args):
         file = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq + '.mp4' }}"
         proxyUrl = "{{ params.proxyUrl }}"
         curriCode = "{{ params.curriCode }}"
-        file_prefix = "{{ params.curriCode + '_' + params.term + '_' + params.week + '_' + params.week_seq }}"
+        file_prefix = '{{ params.curriCode + "_" + params.term + "_" + params.week + "_" + params.week_seq }}'
         metadata = " {{ params.metadata.replace(' ', '') if params.metadata else ''}}"
         resultFileName = " {{ params.resultFileName }}"
 
@@ -129,8 +129,8 @@ def create_dag(schedule, default_args):
             image_pull_policy='Always',
             cmds = ["sh -c"],
             args = [
-                "ffmpeg -i /mnt/"+run_id+"/"+file+" -ar 16000 /mnt/"+run_id+"/"+file_prefix+".wav",
-                "rm -f /mnt/"+run_id+"/"+file
+                'ffmpeg -i /mnt/'+run_id+'/'+file+' -ar 16000 /mnt/'+run_id+'/'+file_prefix+'.wav',
+                'rm -f /mnt/'+run_id+'/'+file
             ],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
