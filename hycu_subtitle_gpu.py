@@ -127,9 +127,7 @@ def create_dag(schedule, default_args):
             image = container_repository+"/hycu/ffmpeg:latest",
             image_pull_secrets=[k8s.V1LocalObjectReference("ecr")],
             image_pull_policy='Always',
-            #cmds = ["ffmpeg","-i", "/mnt/"+run_id+'/'+file, "-ar", "16000", "/mnt/"+run_id+'/'+file_prefix + ".wav"],
-            cmds = ["sh"],
-            args = ["-c", "ffmpeg","-i", "/mnt/"+run_id+'/'+file, "-ar", "16000", "/mnt/"+run_id+'/'+file_prefix + ".wav;", "rm -f /mnt/"+run_id+'/'+file+';'],
+            cmds = ["sh", "-c", "ffmpeg","-i", "/mnt/"+run_id+'/'+file, "-ar", "16000", "/mnt/"+run_id+'/'+file_prefix + ".wav;", "rm -f /mnt/"+run_id+'/'+file+';'],
             name="task-"+project+"-wav-extractor",
             task_id="task-"+project+"-wav-extractor",
             in_cluster=in_cluster,  # if set to true, will look in the cluster, if false, looks for file
