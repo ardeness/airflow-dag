@@ -37,7 +37,7 @@ def create_dag(schedule, default_args):
             "curriCode": Param("41XDA", type="string"),
             "week": Param("02", type="string"),
             "week_seq": Param("00", type="string"),
-            "proxyUrl": Param("http://1.235.46.154:20880/CmsData/VideoProxy/2025/02/26/CT_V000000010002/CT_V000000010002.mp4", type="string"),
+            "proxyUrl": Param("http://host/CT_V000000010002.mp4", type="string"),
             "resultFileName": Param("CT_V000000010002.json", type="string"),
             "metadata": Param("key1:value1, key2:value2", type=["null", "string"]),
         }
